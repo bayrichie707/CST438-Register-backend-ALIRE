@@ -1,5 +1,6 @@
 package com.cst438.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,19 +41,21 @@ public class StudentController {
 		
 	// create a new student and return the system generated student_id
 	@PostMapping("/student")
-	@Transactional
-	public int createStudent(@RequestBody StudentDTO studentDTO) {
-		System.out.println("/Creating new student");
-		Student student = new Student();
-		//student.setStudent_id(5);
-		student.setName("Test Student");
-		student.setEmail("anothertest@csumb.edu");
-		student.setStatusCode(0);
-		student.setStatus("Hold");
-		studentRepository.save(student);
-		StudentDTO newStudent = createStudent(student);
-		
-		return newStudent.id();
+	public int createStudent(@RequestBody StudentDTO sdto) {
+		System.out.println("Called POST /student to add new student");
+		Student check = studentRepository.findByEmail(sdto.email());
+		if (check != null) {
+			// error.  email exists.
+			throw  new ResponseStatusException( HttpStatus.BAD_REQUEST, "student email already exists "+sdto.email());
+		}
+		Student s = new Student();
+		s.setEmail(sdto.email());
+		s.setName(sdto.name());
+		s.setStatusCode(sdto.statusCode());
+		s.setStatus(sdto.status());
+		studentRepository.save(s);
+		// return the database generated student_id 
+		return s.getStudent_id();
 	}
 	
 	/*
@@ -70,54 +73,46 @@ public class StudentController {
 		enrollmentRepository.delete(student);
 	}
 	*/
-	@DeleteMapping("/student/{student_id}")
-	@Transactional
-	public void dropStudent(  @PathVariable int student_id, @RequestParam("force") boolean force  ) {
-		System.out.println("/drop student id: " + student_id);
-		String student_email = "test@csumb.edu";   // student's email 
-
-		Student student = studentRepository.findByEmail(student_email);
-		Enrollment enrollment = enrollmentRepository.findById(student_id).orElse(null);
-		
-		if (enrollment != null && enrollment.getStudent().getEmail().equals(student_email)) {
-			System.out.println("WARNING: Student " + student_email + " has enrollment in one or more classes.");
-			studentRepository.delete(student);
-		}else if (enrollment == null){
-			System.out.println("Student " + student_email + " has no enrollment.");
-			studentRepository.delete(student);
-		}else {
-			studentRepository.delete(student);
+	@DeleteMapping("/student/{id}")
+	public void deleteStudent(@PathVariable("id") int id, @RequestParam("force") Optional<String> force) {
+		System.out.println("Called DELETE /student/{id} to delete student given ID");
+		Student s = studentRepository.findById(id).orElse(null);
+		if (s!=null) {
+			// are there enrollments?
+			List<Enrollment> list = enrollmentRepository.findByStudentId(id);
+			if (list.size()>0 && force.isEmpty()) {
+				throw  new ResponseStatusException( HttpStatus.BAD_REQUEST, "student has enrollments");
+			} else {
+				studentRepository.deleteById(id);
+			}
+		} else {
+			// if student does not exist.  do nothing
+			return;
 		}
 		
-		/*
-        if (force) {
-            // Perform the deletion without any checks or warnings
-            // ...
-            return ResponseEntity.ok("Resource deleted.");
-        } else {
-            // Display a warning or perform some checks before deletion
-            // ...
-            return ResponseEntity.badRequest().body("Deletion canceled. Use 'force=true' to delete.");
-        }
-		*/	
 	}
 	
-    @PutMapping("/student/{student_id}")
-    public void updateStudent(@PathVariable int student_id /*, @RequestBody StudentDTO studentDTO*/) {
-        System.out.println("/Updating Student status");
-        Student student = studentRepository.findById(student_id).orElse(null);
-        Student updateStudent = new Student();
-        updateStudent.setStudent_id(student.getStudent_id());
-        updateStudent.setName(student.getName());
-        updateStudent.setEmail(student.getEmail());
-        updateStudent.setStatus("Updated");
-        updateStudent.setStatusCode(1);
-        studentRepository.save(updateStudent);
-        
-    	// Perform the update operation using updatedResource
-        // ...
-        //return ResponseEntity.ok(updatedResource);
-    }
+	@PutMapping("/student/{id}") 
+	public void updateStudent(@PathVariable("id")int id, @RequestBody StudentDTO sdto) {
+		Student s = studentRepository.findById(id).orElse(null);
+		if (s==null) {
+			throw  new ResponseStatusException( HttpStatus.NOT_FOUND, "student not found "+id);
+		}
+		// has email been changed, check that new email does not exist in database
+		if (!s.getEmail().equals(sdto.email())) {
+		// update name, email.  new email must not exist in database
+			Student check = studentRepository.findByEmail(sdto.email());
+			if (check != null) {
+				// error.  email exists.
+				throw  new ResponseStatusException( HttpStatus.BAD_REQUEST, "student email already exists "+sdto.email());
+			}
+		}
+		s.setEmail(sdto.email());
+		s.setName(sdto.name());
+		s.setStatusCode(sdto.statusCode());
+		s.setStatus(sdto.status());
+		studentRepository.save(s);
+	}
 	
 	
 	/*
@@ -125,17 +120,29 @@ public class StudentController {
 	@GetMapping("/students")
 	public StudentDTO[] getAllStudents(@RequestParam())
 	*/
-	@GetMapping("/students")
-	@Transactional
-	public StudentDTO[] getAllStudents(@RequestParam("semester") Optional<String> semester) {
-		//StudentDTO[] allStudents = new 
-		System.out.println("/student list called");
-		
-		List <Student> students = (List<Student>) studentRepository.findAll();
-		StudentDTO[] stu = createStudents(students);
-		return stu;
+	@GetMapping("/student")
+	public StudentDTO[] getStudents() {
+		System.out.println("Called GET /student to list all students");
+		Iterable<Student> list = studentRepository.findAll();
+		ArrayList<StudentDTO> alist = new ArrayList<>();
+		for (Student s : list) {
+			StudentDTO sdto = new StudentDTO(s.getStudent_id(), s.getName(), s.getEmail(), s.getStatusCode(), s.getStatus());
+			alist.add(sdto);
+		}
+		return alist.toArray(new StudentDTO[alist.size()]);
 	}
 	
+	// Get student by ID
+	@GetMapping("/student/{id}")
+	public StudentDTO getStudent(@PathVariable("id") int id) {
+		Student s = studentRepository.findById(id).orElse(null);
+		if (s!=null) {
+			StudentDTO sdto = new StudentDTO(s.getStudent_id(), s.getName(), s.getEmail(), s.getStatusCode(), s.getStatus());
+			return sdto;
+		} else {
+			throw  new ResponseStatusException( HttpStatus.NOT_FOUND, "student not found "+id);
+		}
+	}
 	/* 
 	 * helper method to transform course, enrollment, student entities into 
 	 * a an instances of ScheduleDTO to return to front end.

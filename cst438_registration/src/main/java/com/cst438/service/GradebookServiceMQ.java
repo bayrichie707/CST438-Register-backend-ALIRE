@@ -14,6 +14,7 @@ import com.cst438.domain.Enrollment;
 import com.cst438.domain.EnrollmentDTO;
 import com.cst438.domain.EnrollmentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 
 @Service
 @ConditionalOnProperty(prefix = "gradebook", name = "service", havingValue = "mq")
@@ -33,6 +34,15 @@ public class GradebookServiceMQ implements GradebookService {
 		System.out.println("Start Message "+ student_email +" " + course_id); 
 		// create EnrollmentDTO, convert to JSON string and send to gradebookQueue
 		// TODO
+		
+        // Create an EnrollmentDTO object
+        EnrollmentDTO enrollmentDTO = new EnrollmentDTO(course_id, student_email, student_name, course_id);
+
+        // Convert the EnrollmentDTO to a JSON string
+        String enrollmentJson = new Gson().toJson(enrollmentDTO);
+
+        // Send the JSON message to the gradebookQueue
+        rabbitTemplate.convertAndSend(gradebookQueue.getName(), enrollmentJson);
 	}
 	
 	@RabbitListener(queues = "registration-queue")
@@ -47,7 +57,25 @@ public class GradebookServiceMQ implements GradebookService {
 		// deserialize the string message to FinalGradeDTO[] 
 		
 		// TODO
+        FinalGradeDTO[] finalGrades = new Gson().fromJson(message, FinalGradeDTO[].class);
+        
+        // Loop through the finalGrades array and update student enrollment records
+        for (FinalGradeDTO grade : finalGrades) {
+            // Find the enrollment record by student email and course ID
+            Enrollment enrollment = enrollmentRepository.findByEmailAndCourseId(grade.studentEmail(), grade.courseId());
 
+            if (enrollment != null) {
+                // Update the grade for the enrollment record
+                enrollment.setCourseGrade(grade.grade());
+
+                // Save the updated enrollment record to the database
+                enrollmentRepository.save(enrollment);
+
+                System.out.println("Updated grade for student " + grade.studentEmail() + " in course " + grade.courseId());
+            } else {
+                System.out.println("Enrollment record not found for student " + grade.studentEmail() + " in course " + grade.courseId());
+            }
+        }
 	}
 	
 	private static String asJsonString(final Object obj) {

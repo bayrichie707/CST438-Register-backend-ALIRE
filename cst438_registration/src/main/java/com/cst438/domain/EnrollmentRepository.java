@@ -7,7 +7,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
 public interface EnrollmentRepository extends CrudRepository <Enrollment, Integer> {
-	 
+	
 	@Query("select e from Enrollment e where e.student.email=:email and e.year=:year and e.semester=:semester")
 	public List<Enrollment> findStudentSchedule(
 			@Param("email") String email, 
@@ -18,10 +18,8 @@ public interface EnrollmentRepository extends CrudRepository <Enrollment, Intege
 	Enrollment findByEmailAndCourseId(@Param("email") String email, @Param("course_id") int course_id);
 	
 	//TODO Modify enrollment repository interface for new query method findEnrollmentByStudentId
-	@Query("select e from Enrollment e where e.student.student_id=:student_id")
-	Enrollment findEnrollmentByStudentId(@Param("student_id") int student_id);
-	
-	//Enrollment findEnrollmentByStudentId(int student_id);
+	@Query("select e from Enrollment e where e.student.student_id=:id")
+    List<Enrollment> findByStudentId( @Param("id") int id); 
 
 	
 }
