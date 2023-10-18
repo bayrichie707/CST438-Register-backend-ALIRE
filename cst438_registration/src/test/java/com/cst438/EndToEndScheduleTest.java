@@ -45,11 +45,13 @@ import com.cst438.domain.EnrollmentRepository;
 @SpringBootTest
 public class EndToEndScheduleTest {
 
-	public static final String CHROME_DRIVER_FILE_LOCATION = "C:/chromedriver_win32/chromedriver.exe";
+	public static final String CHROME_DRIVER_FILE_LOCATION = "C://Users//17074//Downloads//chromedriver_win32 (1)";
 
 	public static final String URL = "http://localhost:3000";
 
 	public static final String TEST_USER_EMAIL = "test@csumb.edu";
+	
+	public static final String TEST_USER_NAME = "test";
 
 	public static final int TEST_COURSE_ID = 40442; 
 
@@ -138,7 +140,7 @@ public class EndToEndScheduleTest {
 		}
 
 	}
-
+	
 	@Test
 	public void addStudent() throws Exception {
 
@@ -167,12 +169,102 @@ public class EndToEndScheduleTest {
 			
 			// Get webelement id for name and enter name
 			// get webelement id for email and enter email
-			driver.findElement(By.name("name")).sendKeys("name");
+			driver.findElement(By.name("name")).sendKeys(TEST_USER_NAME);
 			driver.findElement(By.name("email")).sendKeys(TEST_USER_EMAIL);
 			
+			// Click on add button to add student once fields are populated
+			driver.findElement(By.id("add")).click();
+			Thread.sleep(SLEEP_DURATION);
+			
+			// verify new student shows in new students
+			WebElement we = driver.findElement(By.xpath("//tbody//tr//td//td//[td='"+TEST_USER_EMAIL+"']"));
+			assertNotNull(we, "Test add new student email not found in students after successfully adding the student.");
+			
+
+		} catch (Exception ex) {
+			throw ex;
+		} finally {
+			driver.quit();
+		}
+
+	}
+	
+	@Test
+	public void deleteStudent() throws Exception {
+
+		System.setProperty("webdriver.chrome.driver", CHROME_DRIVER_FILE_LOCATION);
+		WebDriver driver = new ChromeDriver();
+		// Puts an Implicit wait for 10 seconds before throwing exception
+		driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+
+		try {
+
+			driver.get(URL);
+			Thread.sleep(SLEEP_DURATION);
+
+			// Get webelement for adminLink
+			WebElement adminLink = driver.findElement(By.xpath("//[@href='/admin']"));
+			// Click adminLink
+			adminLink.click();
+			Thread.sleep(SLEEP_DURATION);
+			
+			// Get webelement of delete student button
+			driver.findElement(By.name("Delete")).click();
+			Thread.sleep(SLEEP_DURATION);
+			
+            // check that student is no longer in the schedule
+            Thread.sleep(SLEEP_DURATION);
+            assertThrows(NoSuchElementException.class, () -> {
+            	driver.findElement(By.xpath("//tbody//tr//td//td//[td='"+TEST_USER_EMAIL+"']"));
+            });	
+			
+
+		} catch (Exception ex) {
+			throw ex;
+		} finally {
+			driver.quit();
+		}
+
+	}
+	
+	@Test
+	public void editStudent() throws Exception {
+
+		System.setProperty("webdriver.chrome.driver", CHROME_DRIVER_FILE_LOCATION);
+		WebDriver driver = new ChromeDriver();
+		// Puts an Implicit wait for 10 seconds before throwing exception
+		driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+
+		try {
+
+			driver.get(URL);
+			Thread.sleep(SLEEP_DURATION);
+
+			// Get webelement for adminLink
+			WebElement adminLink = driver.findElement(By.xpath("//[@href='/admin']"));
+			// Click adminLink
+			adminLink.click();
+			Thread.sleep(SLEEP_DURATION);
+			
+			// Get webelement of delete student button
+			driver.findElement(By.name("Edit")).click();
+			Thread.sleep(SLEEP_DURATION);
+			
+//			WebElement stuId = driver.findElement(By.name("studentId")).sendKeys("");
+			driver.findElement(By.name("name")).sendKeys(TEST_USER_NAME);
+			driver.findElement(By.name("email")).sendKeys(TEST_USER_EMAIL);
+			
+			driver.findElement(By.name("SAVE")).click();
+			Thread.sleep(SLEEP_DURATION);
+		
 			
 			
-					
+            // check that student edited in the schedule
+            Thread.sleep(SLEEP_DURATION);
+            assertThrows(NoSuchElementException.class, () -> {
+            	driver.findElement(By.xpath("//tbody//tr//td//td//[td='"+TEST_USER_EMAIL+"']"));
+            });	
+            
 
 		} catch (Exception ex) {
 			throw ex;
