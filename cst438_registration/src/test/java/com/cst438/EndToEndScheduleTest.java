@@ -138,4 +138,47 @@ public class EndToEndScheduleTest {
 		}
 
 	}
+
+	@Test
+	public void addStudent() throws Exception {
+
+		System.setProperty("webdriver.chrome.driver", CHROME_DRIVER_FILE_LOCATION);
+		WebDriver driver = new ChromeDriver();
+		// Puts an Implicit wait for 10 seconds before throwing exception
+		driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+
+		try {
+
+			driver.get(URL);
+			Thread.sleep(SLEEP_DURATION);
+			
+			// Get webelement for adminLink
+			WebElement adminLink = driver.findElement(By.xpath("//[@href='/admin']"));
+			// Click adminLink
+			adminLink.click();
+			Thread.sleep(SLEEP_DURATION);
+			
+
+			// Get webelement for new student button
+			WebElement newStudentBtn = driver.findElement(By.className("MuiButtonBase-root MuiButton-root MuiButton-outlined MuiButton-outlinedPrimary MuiButton-sizeMedium MuiButton-outlinedSizeMedium MuiButton-root MuiButton-outlined MuiButton-outlinedPrimary MuiButton-sizeMedium MuiButton-outlinedSizeMedium css-1rwt2y5-MuiButtonBase-root-MuiButton-root"));
+			// Click new student button
+			newStudentBtn.click();
+			Thread.sleep(SLEEP_DURATION);
+			
+			// Get webelement id for name and enter name
+			// get webelement id for email and enter email
+			driver.findElement(By.name("name")).sendKeys("name");
+			driver.findElement(By.name("email")).sendKeys(TEST_USER_EMAIL);
+			
+			
+			
+					
+
+		} catch (Exception ex) {
+			throw ex;
+		} finally {
+			driver.quit();
+		}
+
+	}
 }
